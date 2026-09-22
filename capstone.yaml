@@ -1,0 +1,25 @@
+name: flyrank-capstone-social-studio
+brief: Multi-Platform Social Campaign Publisher
+run: npm start
+seed: npm run seed
+test: npm test
+base_url: http://localhost:3100
+fake_platform_url: http://localhost:4010
+auth:
+  header: Authorization
+  scheme: Bearer
+  env: API_KEY
+endpoints:
+  - { method: GET,  path: /health }
+  - { method: POST, path: /api/posts }
+  - { method: POST, path: /api/posts/{id}/campaigns }
+  - { method: GET,  path: /api/campaigns/{id} }
+  - { method: POST, path: /api/variants/{id}/approve }
+  - { method: POST, path: /api/campaigns/{id}/schedule }
+  - { method: POST, path: /api/campaigns/{id}/publish }
+  - { method: GET,  path: /api/campaigns/{id}/history }
+  - { method: POST, path: /webhook/social-delivery, note: "HMAC signature in X-Signature, no API key" }
+platform_admin:
+  - { method: POST, path: /_admin/rate-limit, body: '{"retryAfter":30}' }
+  - { method: POST, path: /_admin/faults, body: '{"faults":["timeout_after_accept"]}' }
+  - { method: POST, path: /_admin/webhooks/hold, body: '{"hold":true}' }

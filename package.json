@@ -1,0 +1,22 @@
+{
+  "name": "flyrank-capstone-social-studio",
+  "version": "1.0.0",
+  "description": "Multi-platform social campaign publisher: idempotent, rate-limit-aware, durable scheduling, signed-webhook status tracking.",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node scripts/start-all.js",
+    "app": "node src/server.js",
+    "worker": "node src/worker.js",
+    "platform": "node fakeplatform/server.js",
+    "seed": "node scripts/seed.js",
+    "demo": "node scripts/demo.js",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.js\""
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "sharp": "^0.34.0",
+    "zod": "^3.24.0"
+  }
+}
