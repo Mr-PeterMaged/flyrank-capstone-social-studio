@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Social Media Studio</title>
+<style>
+  :root { --bg:#0b1f1c; --panel:#11302b; --line:#1f4a42; --text:#e6f5ef; --dim:#8fb3a8; --ok:#5fd9a0; --warn:#f2c94c; --bad:#ff7a7a; --info:#7fb2ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--line); }
+  h1 { font-size:18px; margin:0; } h2 { font-size:15px; margin:0 0 10px; color:var(--ok); }
+  main { max-width:1200px; margin:0 auto; padding:20px; display:grid; gap:20px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  button { background:#1b4d43; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 11px; cursor:pointer; font:inherit; }
+  button:hover { background:#236357; } button.primary { background:var(--ok); color:#06231b; border-color:var(--ok); font-weight:600; }
+  button.danger { color:var(--bad); }
+  input, textarea { background:#0b1f1c; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; width:100%; }
+  textarea { resize:vertical; min-height:96px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
+  .variant { border:1px solid var(--line); border-radius:8px; padding:10px; display:grid; gap:8px; background:#0e2723; }
+  .variant img { width:100%; border-radius:6px; background:#000; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; border:1px solid currentColor; }
+  .draft,.queued { color:var(--info); } .approved,.published { color:var(--ok); } .rejected,.failed,.blocked { color:var(--bad); } .publishing { color:var(--warn); }
+  .dim { color:var(--dim); } .err { color:var(--bad); font-size:13px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; } th,td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--dim); font-weight:500; } a { color:var(--info); }
+  .mono { font-family:ui-monospace,Consolas,monospace; font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Social Media Studio</h1>
+  <div class="row">
+    <span class="dim">Scheduler time: <span id="clock" class="mono">-</span></span>
+    <button id="adv1h">+1 hour</button><button id="adv1d">+1 day</button><button id="clockReset">Reset</button>
+    <button id="keyBtn">API key</button>
+  </div>
+</header>
+<main>
+  <section class="panel">
+    <h2>1 · Blog posts</h2>
+    <div class="row" style="margin-bottom:10px">
+      <input id="pTitle" placeholder="Title" style="flex:2;min-width:180px">
+      <input id="pUrl" placeholder="https://example.com/post" style="flex:2;min-width:180px">
+    </div>
+    <textarea id="pBody" placeholder="Post body (Markdown)"></textarea>
+    <div class="row" style="margin-top:8px"><button class="primary" id="addPost">Add post</button><span id="postErr" class="err"></span></div>
+    <table id="posts" style="margin-top:12px"></table>
+  </section>
+  <div id="campaigns" style="display:grid;gap:20px"></div>
+  <section class="panel">
+    <h2>Publish history</h2>
+    <table id="history"></table>
+  </section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const h = (tag, props = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') el.className = v; else if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else el[k] = v;
+  }
+  for (const kid of kids.flat()) if (kid !== null && kid !== undefined) el.append(kid);
+  return el;
+};
+let KEY = (() => { try { return localStorage.getItem('studioKey') || ''; } catch { return ''; } })();
+const setKey = () => { KEY = prompt('API key (API_KEY from your .env)', KEY) || ''; try { localStorage.setItem('studioKey', KEY); } catch {} refresh(); };
+$('#keyBtn').onclick = setKey;
+
+async function api(method, url, body) {
+  const res = await fetch(url, { method, headers: { 'content-type': 'application/json', authorization: `Bearer ${KEY}` }, body: body ? JSON.stringify(body) : undefined });
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 401) { setKey(); throw new Error('Unauthorized'); }
+  if (!res.ok) { const e = new Error(json.error?.message || res.statusText); e.details = json.error?.details; throw e; }
+  return json;
+}
+const fmt = (ms) => (ms ? new Date(ms).toLocaleString() : '-');
+const badge = (s) => h('span', { class: `badge ${s}` }, s);
+const violations = (e) => (e.details?.violations ? [].concat(e.details.violations).map((v) => v.message).join('; ') : e.message);
+
+async function act(fn) { try { await fn(); } catch (e) { alert(violations(e)); } refresh(); }
+
+function variantCard(v) {
+  const sp = v.socialPost;
+  const ta = h('textarea', { value: v.caption, disabled: v.reviewStatus !== 'draft' && v.reviewStatus !== 'blocked' });
+  ta.value = v.caption;
+  const errs = v.validationErrors.length ? h('div', { class: 'err' }, v.validationErrors.map((x) => h('div', {}, `${x.rule}: ${x.message}`))) : null;
+  return h('div', { class: 'variant' },
+    h('div', { class: 'row' }, h('b', {}, v.platform), badge(v.reviewStatus), sp ? badge(sp.status) : null, h('span', { class: 'dim mono' }, `${v.imageWidth}×${v.imageHeight}`)),
+    h('img', { src: v.imageUrl, alt: `${v.platform} variant`, loading: 'lazy' }),
+    ta, errs,
+    h('div', { class: 'row' },
+      h('button', { onclick: () => act(() => api('PATCH', `/api/variants/${v.id}`, { caption: ta.value })) }, 'Save edit'),
+      h('button', { class: 'primary', onclick: () => act(() => api('POST', `/api/variants/${v.id}/approve`)) }, 'Approve'),
+      h('button', { class: 'danger', onclick: () => act(() => api('POST', `/api/variants/${v.id}/reject`)) }, 'Reject')),
+    sp ? h('div', { class: 'dim' }, `slot ${fmt(sp.scheduledAt)} · attempts ${sp.attempts}`,
+      sp.postUrl ? [' · ', h('a', { href: sp.postUrl, target: '_blank', rel: 'noopener' }, 'live post')] : '',
+      sp.lastError ? h('div', { class: 'err' }, sp.lastError) : null) : null);
+}
+
+function campaignPanel(c) {
+  const when = h('input', { type: 'number', value: 60, min: 0, style: 'width:90px' });
+  return h('section', { class: 'panel' },
+    h('div', { class: 'row', style: 'justify-content:space-between' },
+      h('h2', { style: 'margin:0' }, `Campaign #${c.id} · ${c.post.title}`), badge(c.status)),
+    h('div', { class: 'row', style: 'margin:10px 0' },
+      h('button', { class: 'primary', onclick: () => act(() => api('POST', `/api/campaigns/${c.id}/publish`, {})) }, 'Publish now'),
+      h('span', { class: 'dim' }, 'or in'), when, h('span', { class: 'dim' }, 'seconds'),
+      h('button', { onclick: () => act(() => api('POST', `/api/campaigns/${c.id}/schedule`, { inSeconds: Number(when.value) })) }, 'Schedule')),
+    h('div', { class: 'grid' }, c.variants.map(variantCard)));
+}
+
+async function refresh() {
+  if (!KEY) return;
+  try {
+    const [posts, campaigns, history] = await Promise.all([api('GET', '/api/posts'), api('GET', '/api/campaigns'), api('GET', '/api/history?limit=30')]);
+    api('GET', '/api/admin/clock').then((c) => ($('#clock').textContent = new Date(c.schedulerNow).toLocaleString())).catch(() => {});
+    $('#posts').replaceChildren(
+      h('tr', {}, ...['#', 'Title', 'URL', ''].map((x) => h('th', {}, x))),
+      ...posts.map((p) => h('tr', {}, h('td', {}, p.id), h('td', {}, p.title), h('td', {}, h('a', { href: p.url, target: '_blank', rel: 'noopener' }, p.url)),
+        h('td', {}, h('button', { class: 'primary', onclick: () => act(() => api('POST', `/api/posts/${p.id}/campaigns`, {})) }, 'Create campaign')))));
+    // Don't rebuild cards while someone is typing in a caption box.
+    if (!document.activeElement || document.activeElement.tagName !== 'TEXTAREA' || document.activeElement.id === 'pBody') {
+      $('#campaigns').replaceChildren(...campaigns.map(campaignPanel));
+    }
+    $('#history').replaceChildren(
+      h('tr', {}, ...['Time', 'Campaign', 'Platform', 'Attempt', 'Outcome', 'Detail'].map((x) => h('th', {}, x))),
+      ...history.map((a) => h('tr', {}, h('td', {}, new Date(a.created_at).toLocaleTimeString()), h('td', {}, a.campaign_id), h('td', {}, a.platform), h('td', {}, a.attempt_no),
+        h('td', {}, h('span', { class: 'badge ' + (/accepted|delivered/.test(a.outcome) ? 'published' : /rate|timeout|transient/.test(a.outcome) ? 'publishing' : 'failed') }, a.outcome)),
+        h('td', { class: 'dim' }, a.detail || ''))));
+  } catch (e) { console.warn(e); }
+}
+
+$('#addPost').onclick = async () => {
+  $('#postErr').textContent = '';
+  try {
+    await api('POST', '/api/posts', { title: $('#pTitle').value, body: $('#pBody').value, url: $('#pUrl').value });
+    $('#pTitle').value = $('#pBody').value = $('#pUrl').value = '';
+    refresh();
+  } catch (e) { $('#postErr').textContent = (e.details || []).map((d) => `${d.path}: ${d.message}`).join('; ') || e.message; }
+};
+const advance = (s) => act(() => api('POST', '/api/admin/clock/advance', { seconds: s }));
+$('#adv1h').onclick = () => advance(3600);
+$('#adv1d').onclick = () => advance(86400);
+$('#clockReset').onclick = () => act(() => api('POST', '/api/admin/clock/reset'));
+
+if (!KEY) setKey(); else refresh();
+setInterval(refresh, 2500);
+</script>
+</body>
+</html>
