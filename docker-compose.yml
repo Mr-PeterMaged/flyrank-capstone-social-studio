@@ -1,0 +1,23 @@
+# docker compose up   (reads the same .env as `npm start`; copy .env.example first)
+services:
+  platform:
+    build: .
+    command: ["node", "fakeplatform/server.js"]
+    env_file: .env
+    environment:
+      WEBHOOK_URL: http://app:3100/webhook/social-delivery
+    ports: ["4010:4010"]
+
+  app:
+    build: .
+    command: ["node", "src/server.js"]
+    env_file: .env
+    environment:
+      PLATFORM_BASE_URL: http://platform:4010
+      DATA_DIR: /data
+    ports: ["3100:3100"]
+    volumes: ["studio-data:/data"]
+    depends_on: [platform]
+
+volumes:
+  studio-data:
