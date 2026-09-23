@@ -1,0 +1,11 @@
+{
+  "assets": [
+    [
+      "public",
+      ""
+    ]
+  ],
+  "backend": true,
+  "home": "/",
+  "demo": false
+}

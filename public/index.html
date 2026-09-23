@@ -27,6 +27,8 @@
   table { width:100%; border-collapse:collapse; font-size:13px; } th,td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
   th { color:var(--dim); font-weight:500; } a { color:var(--info); }
   .mono { font-family:ui-monospace,Consolas,monospace; font-size:12px; }
+
+.pm-credit{display:block;clear:both;padding:24px 16px;margin-top:24px;text-align:center;font:12px/1.8 system-ui,sans-serif;letter-spacing:normal;color:inherit;border-top:1px solid #87958c55}.pm-credit a{color:inherit;text-decoration:underline;text-underline-offset:3px}.pm-credit a:focus-visible{outline:2px solid currentColor;outline-offset:4px}
 </style>
 </head>
 <body>
@@ -149,5 +151,6 @@ $('#clockReset').onclick = () => act(() => api('POST', '/api/admin/clock/reset')
 if (!KEY) setKey(); else refresh();
 setInterval(refresh, 2500);
 </script>
+<footer class="pm-credit" aria-label="Developer credits"><div>Developed by <a href="https://petermaged.com/">peter maged</a></div><div>© 2026 PeterMaged. All rights reserved.</div></footer>
 </body>
 </html>

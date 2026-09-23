@@ -1,3 +1,20 @@
+# Social Media Studio
+
+**Designed and developed by [Peter Maged](https://petermaged.com/).**
+
+Create, review and schedule platform-specific campaigns with a durable publishing queue and signed delivery updates.
+
+## Product and technical overview
+
+- **Implementation:** Node.js 24, Express 4, SQLite, Sharp, OAuth adapters, HMAC webhooks.
+- **Deployment:** Vercel frontend with an external backend; [DEPLOYMENT.md](DEPLOYMENT.md) contains exact settings and operational requirements.
+- **Ownership:** Peter Maged's project implementation; third-party libraries and upstream materials retain their attribution.
+- **License:** [LICENSE](LICENSE). Available for portfolio review, evaluation and further development under these terms.
+
+For project enquiries and implementation work: [petermaged.com](https://petermaged.com/).
+
+## Engineering guide and existing evidence
+
 # flyrank-capstone-social-studio
 
 **Multi-Platform Social Campaign Publisher** — turn one blog post into a campaign: a platform-correct image and a platform-specific caption per network, human approval, then durable, idempotent, rate-limit-aware publishing with status that only changes on a **signature-verified webhook**.
