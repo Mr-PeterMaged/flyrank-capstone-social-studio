@@ -1,0 +1,15 @@
+
+# Preserve the bytes of the explicitly requested local environment snapshot.
+**/node_modules/** -text
+**/.next/** -text
+**/.vercel/** -text
+**/.venv/** -text
+**/__pycache__/** -text
+**/cache/** -text
+**/.pytest_cache/** -text
+**/.ruff_cache/** -text
+**/artifacts/** -text
+**/.env -text
+**/.env.local -text
+**/data/** -text
+**/*.db -text
